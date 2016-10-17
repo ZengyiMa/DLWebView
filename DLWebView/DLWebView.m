@@ -8,6 +8,13 @@
 
 #import "DLWebView.h"
 
+
+@interface DLWebView()<WKScriptMessageHandler>
+@property (nonatomic, weak) WKUserContentController *userController;
+@property (nonatomic, strong) NSMutableDictionary *handlerBlocks;
+@end
+
+
 @implementation DLWebView
 
 
@@ -19,20 +26,19 @@
         webViewConfiguration = [WKWebViewConfiguration new];
     }
     
-    webViewConfiguration.userContentController = [WKUserContentController new];
-    
+    if (!webViewConfiguration.userContentController) {
+        webViewConfiguration.userContentController = [WKUserContentController new];
+    }
     
     self = [super initWithFrame:frame configuration:webViewConfiguration];
     if (self) {
-        
-        
-        
-        
         self.UIDelegate = self;
         self.navigationDelegate = self;
         self.shouldPreviewElement = YES;
         self.allowsOpenTargetIsBlank = YES;
         self.allowsOpenURL = YES;
+        self.userController = webViewConfiguration.userContentController;
+        self.handlerBlocks = [NSMutableDictionary dictionary];
     }
     return self;
 }
@@ -54,6 +60,52 @@
     }
     return nil;
 }
+
+
+- (NSString *)jsonFromData:(id)data
+{
+    if ([NSJSONSerialization isValidJSONObject:data]) {
+        NSError *error;
+        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:data options:0 error:&error];
+        NSString *json = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+        if (!error) return json;
+    }
+    return nil;
+}
+
+#pragma mark - script
+- (void)callScriptWithName:(NSString *)name data:(id)data completionHandler:(void (^)(_Nullable id, NSError * _Nullable error))completionHandler
+{
+    NSParameterAssert(name);
+   NSString *parms = data;
+    if (data && ([data isKindOfClass:[NSDictionary class]] || [data isKindOfClass:[NSArray class]])) {
+        [self evaluateJavaScript:[NSString stringWithFormat:@"%@(JSON.parse('%@'))", name,  [self jsonFromData:data]] completionHandler:completionHandler];
+    }
+    else
+    {
+        [self evaluateJavaScript:[NSString stringWithFormat:@"%@(%@)", name, parms] completionHandler:completionHandler];
+    }
+}
+
+- (void)registerScriptWithName:(NSString *)name handler:(DLWebViewScriptHandler)handler
+{
+    NSParameterAssert(name);
+    [self.userController addScriptMessageHandler:self name:name];
+    if (handler) {
+        self.handlerBlocks[name] = handler;
+    }
+}
+
+
+#pragma mark - script delegate
+- (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message
+{
+    DLWebViewScriptHandler handler = self.handlerBlocks[message.name];
+    if (handler) {
+        handler(message.body);
+    }
+}
+
 
 
 #pragma mark - NavigationDelegate

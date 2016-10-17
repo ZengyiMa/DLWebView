@@ -12,6 +12,10 @@
 NS_ASSUME_NONNULL_BEGIN
 
 
+
+typedef void(^DLWebViewScriptHandler)(id data);
+
+
 @protocol DLWebViewDelegate <NSObject>
 
 @optional
@@ -42,6 +46,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 
 @interface DLWebView : WKWebView<WKUIDelegate, WKNavigationDelegate>
+
 @property (nonatomic, weak) id <DLWebViewDelegate> delegate;
 
 //允许预览元素(如果不实现代理则使用此字段) 默认为 YES
@@ -54,11 +59,31 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) BOOL allowsOpenURL;
 
 
+/**
+ 注册一个相应 js 调用的 Block （使用）
+
+ @param name    js 调用的标识
+ @param handler 处理 block
+ */
+- (void)registerScriptWithName:(NSString *)name handler:(DLWebViewScriptHandler)handler;
 
 
+/**
+ 调用一个 js 函数
+
+ @param name js 函数的名字
+ @param data 传递参数。
+ */
+- (void)callScriptWithName:(NSString *)name data:(id)data completionHandler:(void (^)(id _Nullable, NSError * _Nullable))completionHandler;
 
 
+/**
+ 加载一个 URL
 
+ @param url 需要加载的 URL
+
+ @return 返回一个 WKNavigation 对象，标识一个连接的标识
+ */
 - (WKNavigation *)loadURL:(NSURL *)url;
 
 @end

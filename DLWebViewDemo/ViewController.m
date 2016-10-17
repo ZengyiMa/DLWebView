@@ -23,6 +23,11 @@
     self.webView.allowsBackForwardNavigationGestures = YES;
     [self.view addSubview:self.webView];
     [self.webView loadURL:[NSURL URLWithString:@"https://www.baidu.com"]];
+
+    [self.webView callScriptWithName:@"alert" data:@{@"1":@"2"} completionHandler:^(id _Nullable data, NSError * _Nullable error) {
+        NSLog(@"error = %@", error);
+    }];
+    
 }
 
 
