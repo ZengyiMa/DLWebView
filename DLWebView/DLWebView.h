@@ -12,9 +12,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 
-
 typedef void(^DLWebViewScriptHandler)(id data);
-
 
 @protocol DLWebViewDelegate <NSObject>
 
@@ -58,6 +56,8 @@ typedef void(^DLWebViewScriptHandler)(id data);
 //是否自动检测 openURL 功能 默认是 YES  (需要加入白名单)
 @property (nonatomic, assign) BOOL allowsOpenURL;
 
+// 默认是 NO
+@property (nonatomic, assign) BOOL scalesPageToFit;
 
 /**
  注册一个相应 js 调用的 Block （使用）
@@ -74,7 +74,7 @@ typedef void(^DLWebViewScriptHandler)(id data);
  @param name js 函数的名字
  @param data 传递参数。
  */
-- (void)callScriptWithName:(NSString *)name data:(id)data completionHandler:(void (^)(id _Nullable, NSError * _Nullable))completionHandler;
+- (void)callScriptWithName:(NSString *)name data:(nullable id)data completionHandler:(void (^_Nullable)(id data, NSError * error))completionHandler;
 
 
 /**

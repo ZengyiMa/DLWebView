@@ -12,6 +12,7 @@
 @interface DLWebView()<WKScriptMessageHandler>
 @property (nonatomic, weak) WKUserContentController *userController;
 @property (nonatomic, strong) NSMutableDictionary *handlerBlocks;
+@property (nonatomic, strong) WKUserScript *scalesPageToFitUserScript;
 @end
 
 
@@ -39,6 +40,10 @@
         self.allowsOpenURL = YES;
         self.userController = webViewConfiguration.userContentController;
         self.handlerBlocks = [NSMutableDictionary dictionary];
+        
+        NSString *scalesPageToFitScript = @"var meta = document.createElement('meta'); meta.setAttribute('name', 'viewport'); meta.setAttribute('content', 'width=device-width'); document.getElementsByTagName('head')[0].appendChild(meta);";
+        self.scalesPageToFitUserScript = [[WKUserScript alloc] initWithSource:scalesPageToFitScript injectionTime:WKUserScriptInjectionTimeAtDocumentEnd forMainFrameOnly:YES];
+
     }
     return self;
 }
@@ -47,6 +52,30 @@
 - (WKNavigation *)loadURL:(NSURL *)url
 {
    return [self loadRequest:[NSURLRequest requestWithURL:url]];
+}
+
+
+- (void)setScalesPageToFit:(BOOL)scalesPageToFit
+{
+    _scalesPageToFit = scalesPageToFit;
+    if (_scalesPageToFit) {
+        if (![self.userController.userScripts containsObject:self.scalesPageToFitUserScript]) {
+            [self.userController addUserScript:self.scalesPageToFitUserScript];
+        }
+    }
+    else
+    {
+        if ([self.userController.userScripts containsObject:self.scalesPageToFitUserScript]) {
+            return;
+        }
+        NSArray *originScript = [self.userController.userScripts copy];
+        [self.userController removeAllUserScripts];
+        for (id script in originScript) {
+            if (![self.scalesPageToFitUserScript isEqual:script]) {
+                [self.userController addUserScript:script];
+            }
+        }
+    }
 }
 
 
@@ -74,16 +103,21 @@
 }
 
 #pragma mark - script
-- (void)callScriptWithName:(NSString *)name data:(id)data completionHandler:(void (^)(_Nullable id, NSError * _Nullable error))completionHandler
+- (void)callScriptWithName:(NSString *)name data:(id)data completionHandler:(void (^)(id, NSError * error))completionHandler
 {
     NSParameterAssert(name);
    NSString *parms = data;
     if (data && ([data isKindOfClass:[NSDictionary class]] || [data isKindOfClass:[NSArray class]])) {
         [self evaluateJavaScript:[NSString stringWithFormat:@"%@(JSON.parse('%@'))", name,  [self jsonFromData:data]] completionHandler:completionHandler];
     }
-    else
+    else if(parms)
     {
         [self evaluateJavaScript:[NSString stringWithFormat:@"%@(%@)", name, parms] completionHandler:completionHandler];
+    }
+    else
+    {
+        [self evaluateJavaScript:[NSString stringWithFormat:@"%@()", name] completionHandler:completionHandler];
+
     }
 }
 
