@@ -9,10 +9,35 @@
 #import "DLWebView.h"
 
 
+
+@interface DLWebViewWeakObject : NSObject<WKScriptMessageHandler>
+
+
+@property (nonatomic, weak) WKWebView *webView;
+
+
+@end
+
+@implementation DLWebViewWeakObject
+
+
+- (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message
+{
+    [self.webView performSelector:@selector(userContentController:didReceiveScriptMessage:) withObject:userContentController withObject:message];
+}
+
+
+@end
+
+
+
+
+
 @interface DLWebView()<WKScriptMessageHandler>
 @property (nonatomic, weak) WKUserContentController *userController;
 @property (nonatomic, strong) NSMutableDictionary *handlerBlocks;
 @property (nonatomic, strong) WKUserScript *scalesPageToFitUserScript;
+@property (nonatomic, strong) DLWebViewWeakObject *weakObject;
 @end
 
 
@@ -40,6 +65,8 @@
         self.allowsOpenURL = YES;
         self.userController = webViewConfiguration.userContentController;
         self.handlerBlocks = [NSMutableDictionary dictionary];
+        self.weakObject = [DLWebViewWeakObject new];
+        self.weakObject.webView = self;
         
         NSString *scalesPageToFitScript = @"var meta = document.createElement('meta'); meta.setAttribute('name', 'viewport'); meta.setAttribute('content', 'width=device-width'); document.getElementsByTagName('head')[0].appendChild(meta);";
         self.scalesPageToFitUserScript = [[WKUserScript alloc] initWithSource:scalesPageToFitScript injectionTime:WKUserScriptInjectionTimeAtDocumentEnd forMainFrameOnly:YES];
@@ -124,7 +151,7 @@
 - (void)registerScriptWithName:(NSString *)name handler:(DLWebViewScriptHandler)handler
 {
     NSParameterAssert(name);
-    [self.userController addScriptMessageHandler:self name:name];
+    [self.userController addScriptMessageHandler:self.weakObject name:name];
     if (handler) {
         self.handlerBlocks[name] = handler;
     }
@@ -146,7 +173,6 @@
 // 在发送请求之前，决定是否跳转
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
 {
-    
     if ([self.delegate respondsToSelector:@selector(webView:shouldStartLoadWithRequest:navigationType:navigationAction:)]) {
         BOOL allow = [self.delegate webView:webView shouldStartLoadWithRequest:navigationAction.request navigationType:navigationAction.navigationType navigationAction:navigationAction];
         if (!allow) {
@@ -165,11 +191,7 @@
     
     if ([application canOpenURL:url]) {
         // 可以打开的连接
-#ifdef __IPHONE_10_0
-        [application openURL:url options:@{} completionHandler:nil];
-#else
-        [application openURL:url]
-#endif
+        [application openURL:url];
         decisionHandler(WKNavigationActionPolicyCancel);
         return;
     }
@@ -199,11 +221,7 @@
     UIApplication *application = [UIApplication sharedApplication];
     if ([application canOpenURL:url]) {
         // 可以打开的连接
-#ifdef __IPHONE_10_0
-        [application openURL:url options:@{} completionHandler:nil];
-#else
-        [application openURL:url]
-#endif
+        [application openURL:url];
         decisionHandler(WKNavigationResponsePolicyCancel);
         return;
     }
