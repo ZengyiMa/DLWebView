@@ -46,6 +46,7 @@ typedef void(^DLWebViewScriptHandler)(id data);
 @interface DLWebView : WKWebView<WKUIDelegate, WKNavigationDelegate>
 
 @property (nonatomic, weak) id <DLWebViewDelegate> delegate;
+@property (nonatomic, weak, readonly) WKUserContentController *userController;
 
 //允许预览元素(如果不实现代理则使用此字段) 默认为 YES
 @property (nonatomic, assign) BOOL shouldPreviewElement API_AVAILABLE(ios(10.0));
